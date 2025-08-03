@@ -1,15 +1,15 @@
 version: "3.7"
 services:
   web-server:
-    image: mhjkeee/crudback
+    image: snezhok99/app1
     restart: always
     ports:
-      - "8080:80"
+      - "8181:80"
     depends_on:
       - db
       - phpmyadmin
   db:
-    image: mhjkeee/mysql
+    image: snezhok99/mysql
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: 'secret'
