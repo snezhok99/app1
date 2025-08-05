@@ -87,10 +87,10 @@ pipeline {
             cleanWs()
         }
         failure {
-            slackSend(color: 'danger', message: "Pipeline ${currentBuild.fullDisplayName} failed!")
+            echo 'Pipeline failed!'
         }
         success {
-            slackSend(color: 'good', message: "Pipeline ${currentBuild.fullDisplayName} succeeded!")
+            echo 'Pipeline succeeded!'
         }
     }
 }
