@@ -7,7 +7,7 @@ pipeline {
         DB_USER = 'root'
         DB_PASSWORD = 'secret'
         DB_NAME = 'lena'
-        FRONTEND_URL = 'http://localhost:8080' // или IP manager-ноды, если запускаешь Jenkins вне неё
+        FRONTEND_URL = 'http://192.168.0.1:8080' // или IP manager-ноды, если запускаешь Jenkins вне неё
     }
 
     stages {
