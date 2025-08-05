@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     environment {
-        STACK_NAME = 'app'       // оставил 'app', потому что именно так называется стек в docker
-        DB_SERVICE = 'db'        // изменил с 'app_db' на 'db', чтобы совпадало с именем контейнера app_db.*
+        STACK_NAME = 'app'
+        DB_SERVICE = 'app_db'
         DB_USER = 'root'
         DB_PASSWORD = 'secret'
         DB_NAME = 'lena'
@@ -33,7 +33,7 @@ pipeline {
 
                     sh """
                         docker exec ${dbContainerId} \
-                        mysql -u${DB_USER} -p${DB_PASSWORD} -e 'SELECT 1;'  exit 1
+                        mysql -u${DB_USER} -p${DB_PASSWORD} -e 'SELECT 1;'
                     """
                 }
             }
@@ -50,7 +50,7 @@ pipeline {
 
                     sh """
                         docker exec ${dbContainerId} \
-                        mysql -u${DB_USER} -p${DB_PASSWORD} -e 'USE ${DB_NAME}; SHOW TABLES;'  exit 1
+                        mysql -u${DB_USER} -p${DB_PASSWORD} -e "USE ${DB_NAME}; SHOW TABLES;"
                     """
                 }
             }
