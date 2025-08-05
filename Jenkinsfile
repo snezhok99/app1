@@ -17,18 +17,20 @@ pipeline {
         stage('Build Docker Images') {
             steps {
                 script {
-                    withCredentials([usernamePassword(
-                        credentialsId: env.DOCKER_CREDENTIALS_ID,
-                        usernameVariable: 'DOCKER_USER',
-                        passwordVariable: 'DOCKER_PASS'
+                    withCredentials([
+                        usernamePassword(
+                            credentialsId: env.DOCKER_CREDENTIALS_ID,
+                            usernameVariable: 'DOCKER_USER',
+                            passwordVariable: 'DOCKER_PASS'
+                        )
                     ]) {
                         sh '''
                             echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin || exit 1
                         '''
                     }
 
-                    sh "docker build -f php.Dockerfile -t ${env.DOCKER_USERNAME}/${env.SWARM_STACK_NAME}-web:latest ."
-                    sh "docker build -f mysql.Dockerfile -t ${env.DOCKER_USERNAME}/${env.SWARM_STACK_NAME}-db:latest ."
+                    sh "docker build -f php.Dockerfile -t ${DOCKER_USERNAME}/${SWARM_STACK_NAME}-web:latest ."
+                    sh "docker build -f mysql.Dockerfile -t ${DOCKER_USERNAME}/${SWARM_STACK_NAME}-db:latest ."
                 }
             }
         }
@@ -36,8 +38,8 @@ pipeline {
         stage('Push Docker Images') {
             steps {
                 script {
-                    sh "docker push ${env.DOCKER_USERNAME}/${env.SWARM_STACK_NAME}-web:latest"
-                    sh "docker push ${env.DOCKER_USERNAME}/${env.SWARM_STACK_NAME}-db:latest"
+                    sh "docker push ${DOCKER_USERNAME}/${SWARM_STACK_NAME}-web:latest"
+                    sh "docker push ${DOCKER_USERNAME}/${SWARM_STACK_NAME}-db:latest"
                 }
             }
         }
@@ -50,7 +52,7 @@ pipeline {
                             docker swarm init --advertise-addr $(hostname -i)
                         fi
                     '''
-                    sh "docker stack deploy --with-registry-auth -c docker-compose.yaml ${env.SWARM_STACK_NAME}"
+                    sh "docker stack deploy --with-registry-auth -c docker-compose.yaml ${SWARM_STACK_NAME}"
                 }
             }
         }
@@ -71,9 +73,9 @@ pipeline {
 
                     echo "Testing database connection..."
                     def dbContainer = sh(script: """
-                        docker service ps ${env.SWARM_STACK_NAME}_db --format '{{.Name}}.{{.ID}}' | head -n 1
+                        docker service ps ${SWARM_STACK_NAME}_db --format '{{.Name}}.{{.ID}}' | head -n 1
                     """, returnStdout: true).trim()
-                    
+
                     sh """
                         docker exec ${dbContainer} mysql -u root -p'secret' -e 'USE lena; SHOW TABLES;'
                     """
