@@ -4,7 +4,7 @@ pipeline {
     environment {
         DOCKER_USERNAME = 'snezhok99'
         DOCKER_CREDENTIALS_ID = 'c6b31924-c8a4-4ab3-bfb6-6139260a7909'
-        SWARM_STACK_NAME = 'app'
+        SWARM_STACK_NAME = 'app1'
     }
 
     stages {
