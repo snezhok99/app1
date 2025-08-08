@@ -2,79 +2,102 @@ pipeline {
     agent any
 
     environment {
-        STACK_NAME = 'app'
-        DB_SERVICE = 'db'
+        DOCKER_USERNAME = 'snezhok99'
+        DOCKER_CREDENTIALS_ID = 'docker-hub-creds'
+        SWARM_STACK_NAME = 'app'
+        DB_SERVICE = 'app_db'
         DB_USER = 'root'
         DB_PASSWORD = 'secret'
         DB_NAME = 'lena'
-        FRONTEND_URL = 'http://192.168.0.1:8080' // или IP manager-ноды, если запускаешь Jenkins вне неё
+        FRONTEND_URL = 'http://localhost:8080' // укажи IP, если Jenkins на другой машине
     }
 
     stages {
-        stage('Wait for Services') {
+        stage('Checkout') {
             steps {
-                echo 'Ожидание поднятия сервисов...'
-                sleep time: 20, unit: 'SECONDS'
+                checkout scm
             }
         }
 
-        stage('Test DB Connection') {
+        stage('Build & Push Docker Images') {
             steps {
-                echo 'Проверка подключения к базе данных...'
+                withCredentials([usernamePassword(
+                    credentialsId: env.DOCKER_CREDENTIALS_ID,
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    script {
+                        sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+
+                        // Сборка
+                        sh "docker build -f php.Dockerfile -t ${DOCKER_USERNAME}/${SWARM_STACK_NAME}-web:latest ."
+                        sh "docker build -f mysql.Dockerfile -t ${DOCKER_USERNAME}/${SWARM_STACK_NAME}-db:latest ."
+
+                        // Публикация
+                        sh "docker push ${DOCKER_USERNAME}/${SWARM_STACK_NAME}-web:latest"
+                        sh "docker push ${DOCKER_USERNAME}/${SWARM_STACK_NAME}-db:latest"
+                    }
+                }
+            }
+        }
+
+        stage('Deploy to Docker Swarm') {
+            steps {
                 script {
+                    sh "docker stack deploy --with-registry-auth -c docker-compose.yaml ${SWARM_STACK_NAME}"
+                }
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                script {
+                    echo '⏳ Ожидаем запуск сервисов...'
+                    sleep time: 30, unit: 'SECONDS'
+
+                    echo '🧪 Проверка фронтенда...'
+                    sh """
+                        curl -fsS ${FRONTEND_URL}  {
+                            echo '❌ Фронт не отвечает!'
+                            exit 1
+                        }
+                    """
+
+                    echo '🧪 Проверка БД...'
                     def dbContainerId = sh(
-                        script: "docker ps --filter 'name=${STACK_NAME}_${DB_SERVICE}' --format '{{.ID}}'",
+                        script: "docker ps --filter 'name=${SWARM_STACK_NAME}_${DB_SERVICE}' --format '{{.ID}}'",
                         returnStdout: true
                     ).trim()
 
                     if (!dbContainerId) {
-                        error("Контейнер базы данных не найден!")
+                        error("❌ Контейнер базы данных не найден!")
                     }
 
+                    echo '🧪 Подключение к БД...'
                     sh """
                         docker exec ${dbContainerId} \
-                        mysql -u${DB_USER} -p${DB_PASSWORD} -e 'SELECT 1;'
+                        mysql -u${DB_USER} -p${DB_PASSWORD} -e 'SELECT 1;'  exit 1
                     """
-                }
-            }
-        }
 
-        stage('Test DB Tables') {
-            steps {
-                echo 'Проверка наличия таблиц в базе данных...'
-                script {
-                    def dbContainerId = sh(
-                        script: "docker ps --filter 'name=${STACK_NAME}_${DB_SERVICE}' --format '{{.ID}}'",
-                        returnStdout: true
-                    ).trim()
-
+                    echo '🧪 Проверка таблиц...'
                     sh """
                         docker exec ${dbContainerId} \
-                        mysql -u${DB_USER} -p${DB_PASSWORD} -e "USE ${DB_NAME}; SHOW TABLES;"
+                        mysql -u${DB_USER} -p${DB_PASSWORD} -e 'USE ${DB_NAME}; SHOW TABLES;' || exit 1
                     """
                 }
-            }
-        }
-
-        stage('Test Frontend to Backend') {
-            steps {
-                echo 'Проверка связи между фронтом и бэком...'
-                sh """
-                    curl -fsS ${FRONTEND_URL} || {
-                        echo 'Ошибка: фронтенд недоступен или не может связаться с бэком.'
-                        exit 1
-                    }
-                """
             }
         }
     }
 
     post {
         success {
-            echo '✅ Все тесты пройдены успешно!'
+            echo '✅ Все этапы выполнены успешно!'
         }
         failure {
-            echo '❌ Пайплайн завершился с ошибкой!'
+            echo '❌ Сборка или тесты не прошли. Проверь логи выше.'
+        }
+        always {
+            cleanWs()
         }
     }
 }
