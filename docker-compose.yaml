@@ -1,15 +1,16 @@
 version: "3.7"
 services:
   web-server:
-    image: snezhok99/app1
+    image: app-web:latest         # использовать собранный образ из Jenkins
     restart: always
     ports:
       - "8181:80"
     depends_on:
       - db
       - phpmyadmin
+
   db:
-    image: snezhok99/mysql
+    image: app-db:latest          # использовать собранный образ из Jenkins
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: 'secret'
@@ -28,5 +29,6 @@ services:
       PMA_PASSWORD: 'secret'
     ports:
       - "5000:80"
+
 volumes:
   mysql-data:
