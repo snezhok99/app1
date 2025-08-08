@@ -13,7 +13,7 @@
   <body>
   <p><a href="tovari.php">Список товаров</a></p>
   <p><a href="cart.php">Корзина</a></p>
-  <p><a href="checkout.php">Checkout</a></p>
+  <p><a href="checkout.php">Chfjfjhgj</a></p>
   <div class="container">
       <div class="row">
           <div class="col-12">
