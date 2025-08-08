@@ -4,7 +4,7 @@ services:
     image: app-web:latest         # использовать собранный образ из Jenkins
     restart: always
     ports:
-      - "8181:80"
+      - "8080:80"
     depends_on:
       - db
       - phpmyadmin
