@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         SWARM_STACK_NAME = 'app'
-        DB_SERVICE = 'app_db'
+        DB_SERVICE = 'app'
         DB_USER = 'root'
         DB_PASSWORD = 'secret'
         DB_NAME = 'lena'
