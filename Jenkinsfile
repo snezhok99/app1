@@ -3,11 +3,11 @@ pipeline {
 
     environment {
         SWARM_STACK_NAME = 'app'
-        DB_SERVICE = 'app'
+        DB_SERVICE = 'db'                   // исправлено
         DB_USER = 'root'
         DB_PASSWORD = 'secret'
         DB_NAME = 'lena'
-        FRONTEND_URL = 'http://192.168.0.1:8080'
+        FRONTEND_URL = 'http://192.168.0.1:8181'  // исправлено
     }
 
     stages {
@@ -20,7 +20,6 @@ pipeline {
         stage('Build Docker Images') {
             steps {
                 script {
-                    // Сборка локальных Docker-образов
                     sh "docker build -f php.Dockerfile -t app-web:latest ."
                     sh "docker build -f mysql.Dockerfile -t app-db:latest ."
                 }
@@ -30,14 +29,11 @@ pipeline {
         stage('Deploy to Docker Swarm') {
             steps {
                 script {
-                    // Убедимся, что swarm активен
                     sh '''
                         if ! docker info | grep -q "Swarm: active"; then
-                            docker swarm init  true
+                            docker swarm init || true
                         fi
                     '''
-
-                    // Деплой через docker stack
                     sh "docker stack deploy --with-registry-auth -c docker-compose.yaml ${SWARM_STACK_NAME}"
                 }
             }
@@ -57,25 +53,19 @@ pipeline {
                         fi
                     """
 
-                    echo '🧪 Проверка подключения к БД...'
-                    def dbContainer = sh(
+                    echo '🧪 Получение ID контейнера базы данных...'
+                    def dbContainerId = sh(
                         script: "docker ps --filter name=${SWARM_STACK_NAME}_${DB_SERVICE} --format '{{.ID}}'",
                         returnStdout: true
                     ).trim()
 
-                    if (!dbContainer) {
+                    if (!dbContainerId) {
                         error("❌ Контейнер базы данных не найден!")
                     }
 
-                    echo '🧪 Подключение к MySQL...'
+                    echo '🧪 Подключение к MySQL и проверка таблиц...'
                     sh """
-                        docker exec ${dbContainer} mysql -u${DB_USER} -p${DB_PASSWORD} -e 'SELECT 1;'  exit 1
-                    """
-
-                    echo '🧪 Проверка наличия таблиц в базе данных...'
-                    sh """
-                        docker exec ${dbContainer} \
-                        mysql -u${DB_USER} -p${DB_PASSWORD} -e 'USE ${DB_NAME}; SHOW TABLES;' || exit 1
+                        docker exec ${dbContainerId} mysql -u${DB_USER} -p${DB_PASSWORD} -e 'USE ${DB_NAME}; SHOW TABLES;'
                     """
                 }
             }
