@@ -7,7 +7,7 @@ pipeline {
         DB_USER = 'root'
         DB_PASSWORD = 'secret'
         DB_NAME = 'lena'
-        FRONTEND_URL = 'http://localhost:8181'  // исправлено
+        FRONTEND_URL = 'http://localhost:8080'  // исправлено
     }
 
     stages {
